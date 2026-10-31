@@ -1,0 +1,785 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PC LAN Control</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #101522;
+    color: #e5e7eb;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    background: #1b2638;
+    padding: 22px;
+    text-align: center;
+    border-bottom: 1px solid #334155;
+}
+
+h1 {
+    color: #38bdf8;
+    margin: 0;
+}
+
+main {
+    max-width: 1100px;
+    margin: auto;
+    padding: 15px;
+}
+
+.card {
+    background: #1b2638;
+    padding: 18px;
+    margin: 15px 0;
+    border-radius: 12px;
+    border: 1px solid #334155;
+}
+
+button {
+    background: #0284c7;
+    color: white;
+    border: 0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 4px;
+}
+
+button:hover {
+    background: #0369a1;
+}
+
+input {
+    background: #0f172a;
+    color: white;
+    border: 1px solid #475569;
+    padding: 12px;
+    border-radius: 8px;
+    width: 100%;
+    margin: 7px 0;
+}
+
+pre {
+    background: #0b1020;
+    padding: 12px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-height: 45px;
+}
+
+.file {
+    padding: 12px;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.hidden {
+    display: none;
+}
+
+.muted {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.status {
+    color: #4ade80;
+}
+
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.metric { background:#0f172a; border:1px solid #334155; border-radius:9px; padding:13px; }
+.metric strong { display:block; font-size:23px; color:#38bdf8; margin-top:5px; }
+.meter { height:8px; background:#334155; border-radius:8px; overflow:hidden; margin-top:9px; }
+.meter span { display:block; height:100%; background:#0ea5e9; width:0; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { padding:9px; border-bottom:1px solid #334155; text-align:left; white-space:nowrap; }
+th { color:#7dd3fc; }
+.danger { background:#b91c1c; }
+.danger:hover { background:#991b1b; }
+.warning { color:#fbbf24; }
+.fold-panel { border:1px solid #334155; border-radius:9px; margin:12px 0; background:#111c2e; }
+.fold-panel summary { cursor:pointer; list-style:none; padding:13px 15px; color:#7dd3fc; font-weight:bold; user-select:none; }
+.fold-panel summary::-webkit-details-marker { display:none; }
+.fold-panel summary::before { content:"▸"; display:inline-block; width:20px; color:#38bdf8; transition:transform .15s; }
+.fold-panel[open] summary::before { transform:rotate(90deg); }
+.fold-content { padding:0 13px 13px; }
+.file-layout { display:grid; grid-template-columns:minmax(190px, 0.8fr) minmax(260px, 1.7fr); gap:12px; }
+.tree-box { background:#0f172a; border:1px solid #334155; border-radius:9px; padding:10px; max-height:460px; overflow:auto; }
+.tree-node { padding:4px 2px; font-size:14px; }
+.tree-line { display:flex; align-items:center; gap:5px; }
+.tree-toggle { background:transparent; padding:2px 5px; margin:0; color:#7dd3fc; min-width:24px; }
+.tree-select { background:transparent; color:#e5e7eb; padding:5px 7px; margin:0; text-align:left; overflow-wrap:anywhere; }
+.tree-select.selected { background:#164e63; }
+.tree-children { margin-left:15px; border-left:1px solid #334155; padding-left:5px; }
+.create-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+textarea { width:100%; min-height:95px; resize:vertical; background:#0f172a; color:white; border:1px solid #475569; border-radius:8px; padding:10px; margin:7px 0; }
+@media(max-width:650px){ .file-layout{grid-template-columns:1fr} .create-grid{grid-template-columns:1fr} }
+@media(max-width:600px){ main{padding:9px} .card{padding:13px} }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>PC LAN CONTROL</h1>
+    <p class="muted">Remote PC Dashboard</p>
+</header>
+
+<main>
+
+<!-- LOGIN -->
+
+<div class="card" id="login">
+    <h2>Login</h2>
+
+    <input
+        id="password"
+        type="password"
+        placeholder="Server password"
+    >
+
+    <button onclick="login()">Connect</button>
+
+    <pre id="loginStatus">Waiting for login...</pre>
+</div>
+
+
+<!-- DASHBOARD -->
+
+<div id="dashboard" class="hidden">
+
+    <div class="card">
+        <h2>Connection</h2>
+        <p class="status">Connected to your PC</p>
+        <button onclick="logout()">Disconnect</button>
+    </div>
+
+
+    <!-- FILE MANAGER -->
+    <div class="card">
+        <h2>File Manager</h2>
+        <p class="muted">Browse the LAN_Shared root. Expand folders in the tree, then select a folder to work inside it.</p>
+        <div class="file-layout">
+            <div>
+                <h3>Folder Tree</h3>
+                <div id="folderTree" class="tree-box">Loading folder tree...</div>
+            </div>
+            <div>
+                <h3>Current folder</h3>
+                <div class="row" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                    <input id="folder" placeholder="LAN_Shared root" style="flex:1;min-width:130px">
+                    <button onclick="loadFiles()">Open</button>
+                    <button onclick="goParent()">Up</button>
+                </div>
+                <div id="files"></div>
+                <div class="fold-panel" style="padding-bottom:10px">
+                    <div style="padding:13px 15px;color:#7dd3fc;font-weight:bold">Create in selected folder</div>
+                    <div class="fold-content">
+                        <input id="newItemName" placeholder="New file or folder name">
+                        <div class="create-grid">
+                            <button onclick="createItem('file')">Create file</button>
+                            <button onclick="createItem('folder')">Create folder</button>
+                        </div>
+                        <textarea id="newFileContent" placeholder="Optional text content for the new file"></textarea>
+                        <p class="muted">Files are created as UTF-8 text files. Leave the content blank to create an empty file.</p>
+                        <pre id="createStatus"></pre>
+                    </div>
+                </div>
+                <hr>
+                <h3>Upload File</h3>
+                <input id="uploadPath" placeholder="Destination folder (blank = root)">
+                <input id="upload" type="file">
+                <button onclick="uploadFile()">Upload</button>
+                <pre id="fileStatus"></pre>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- TERMINAL -->
+
+    <div class="card">
+        <h2>Terminal</h2>
+
+        <p class="muted">Safe built-in commands only; this is not unrestricted Windows CMD or PowerShell.</p>
+        <details class="fold-panel"><summary>Show available commands</summary><div class="fold-content"><pre>help, pwd, ls [folder], cd [folder], tree [folder], mkdir/md &lt;path&gt;, touch &lt;path&gt;, cat/type &lt;file&gt;, stat &lt;path&gt;, find &lt;text&gt;, sysinfo/systeminfo, cpu, memory, disks, network/ipconfig, connections/netstat, processes/tasklist, whoami, hostname, time/date, uptime, clear/cls, ver</pre></div></details>
+
+        <input
+            id="command"
+            placeholder="Enter command"
+        >
+
+        <button onclick="runCommand()">Execute</button>
+
+        <pre id="terminalOutput">Terminal ready.</pre>
+    </div>
+
+
+    <!-- SCREEN VIEWER -->
+
+    <div class="card">
+        <h2>Screen Viewer</h2>
+
+        <p class="muted">
+            Capture a screenshot from your PC.
+        </p>
+
+        <button onclick="getScreen()">
+            Capture Screen
+        </button>
+
+        <div id="screenStatus"></div>
+    </div>
+
+    <!-- SYSTEM MONITOR -->
+    <div class="card">
+        <h2>System Monitoring</h2>
+        <div class="grid">
+            <div class="metric">CPU<strong id="cpuValue">--</strong><div class="meter"><span id="cpuBar"></span></div></div>
+            <div class="metric">Memory<strong id="ramValue">--</strong><div class="meter"><span id="ramBar"></span></div></div>
+            <div class="metric">GPU<strong id="gpuValue">--</strong><div class="muted" id="gpuDetails">GPU details unavailable</div></div>
+        </div>
+        <details class="fold-panel"><summary>Disk usage</summary><div class="fold-content"><div id="diskMetrics" class="grid"></div></div></details>
+        <details class="fold-panel"><summary>Temperature sensors</summary><div class="fold-content"><pre id="temperatureInfo">Checking available sensors...</pre><p class="muted">Some Windows systems do not expose CPU temperatures.</p></div></details>
+        <p class="muted">GPU load/temperature depend on hardware and driver support.</p>
+    </div>
+
+    <!-- PROCESS MANAGER -->
+    <div class="card">
+        <h2>Process Manager</h2>
+        <p class="muted">You can stop processes owned by the Windows account running this server.</p>
+        <input id="launchPath" placeholder="Full application path, e.g. C:\Windows\System32\notepad.exe">
+        <button onclick="launchProcess()">Launch application</button>
+        <details class="fold-panel"><summary>Process list (expand to view)</summary><div class="fold-content"><button onclick="loadProcesses()">Refresh processes</button>
+        <div class="table-wrap"><table><thead><tr><th>Process</th><th>PID</th><th>CPU</th><th>RAM</th><th>Owner</th><th>Action</th></tr></thead><tbody id="processRows"></tbody></table></div></div></details>
+    </div>
+
+    <!-- POWER CONTROLS -->
+    <div class="card">
+        <h2>Power Controls</h2>
+        <p class="muted warning">Lock, restart, or shut down the PC. Restart and shutdown are scheduled 30 seconds ahead.</p>
+        <button onclick="powerAction('lock')">Lock PC</button>
+        <button class="danger" onclick="powerAction('restart')">Restart PC</button>
+        <button class="danger" onclick="powerAction('shutdown')">Shut down PC</button>
+        <button onclick="powerAction('cancel')">Cancel pending shutdown</button>
+        <pre id="powerStatus">No power action requested.</pre>
+    </div>
+
+    <!-- LIVE SCREEN -->
+    <div class="card">
+        <h2>Live Screen Stream</h2>
+        <p class="muted">Polls screenshots continuously while enabled. Keep this page open.</p>
+        <button id="streamButton" onclick="toggleStream()">Start live stream</button>
+        <span id="streamState" class="muted">Stopped</span>
+        <div id="liveScreen"><img id="liveScreenImage" alt="Live desktop" class="hidden"></div>
+    </div>
+
+    <!-- NETWORK MONITOR -->
+    <div class="card">
+        <h2>Network Monitor</h2>
+        <div class="grid">
+            <div class="metric">Download<strong id="downloadRate">0 B/s</strong></div>
+            <div class="metric">Upload<strong id="uploadRate">0 B/s</strong></div>
+            <div class="metric">Total received<strong id="downloadTotal">--</strong></div>
+            <div class="metric">Total sent<strong id="uploadTotal">--</strong></div>
+        </div>
+        <details class="fold-panel"><summary>Local IPv4 addresses</summary><div class="fold-content"><pre id="networkAddresses">Loading...</pre></div></details>
+        <details class="fold-panel"><summary>Active connections (up to 150)</summary><div class="fold-content"><div class="table-wrap"><table><thead><tr><th>PID</th><th>Local</th><th>Remote</th><th>Status</th></tr></thead><tbody id="connectionRows"></tbody></table></div></div></details>
+    </div>
+
+</div>
+
+</main>
+
+
+<script>
+
+// Set this to the HTTPS Tailscale Funnel URL for LAN_Control.py.
+// Example: https://my-pc.example-tailnet.ts.net
+const API_BASE = "https://YOUR-TAILSCALE-FUNNEL-URL";
+
+function apiUrl(path) {
+    return API_BASE.replace(/\/+$/, "") + path;
+}
+
+let token = sessionStorage.getItem("lan_token") || "";
+
+
+// API REQUEST
+
+async function api(url, options = {}) {
+
+    options.headers = {
+        ...options.headers,
+        "Authorization": "Bearer " + token
+    };
+
+    let response = await fetch(apiUrl(url), options);
+
+    if (response.status === 401) {
+        logout();
+        throw Error("Authentication expired.");
+    }
+
+    if (!response.ok) {
+        let data = await response.json().catch(() => ({}));
+        throw Error(data.error || "Request failed.");
+    }
+
+    return response;
+}
+
+
+// SHOW DASHBOARD
+
+function showDashboard() {
+
+    document.getElementById("login").classList.add("hidden");
+
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    loadFiles();
+    refreshFolderTree();
+    startDashboardUpdates();
+}
+
+
+// LOGIN
+
+async function login() {
+
+    if (API_BASE.includes("YOUR-TAILSCALE-FUNNEL-URL")) {
+        document.getElementById("loginStatus").textContent =
+            "Configure API_BASE in index.html with your Tailscale Funnel URL first.";
+        return;
+    }
+
+    let password = document.getElementById("password").value;
+
+    try {
+
+        let response = await fetch(apiUrl("/api/login"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({password})
+        });
+
+        let data = await response.json();
+
+        if (!response.ok) {
+            throw Error(data.error || "Login failed.");
+        }
+
+        token = data.token;
+
+        sessionStorage.setItem("lan_token", token);
+
+        showDashboard();
+
+    } catch(error) {
+
+        document.getElementById("loginStatus").textContent =
+            error.message;
+    }
+}
+
+
+// LOGOUT
+
+async function logout() {
+
+    try {
+        if (token) {
+            await fetch(apiUrl("/api/logout"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token
+                },
+                body: "{}"
+            });
+        }
+    } catch(error) {
+        // Clear local session even if server is unavailable.
+    }
+
+    token = "";
+
+    sessionStorage.removeItem("lan_token");
+
+    document.getElementById("dashboard").classList.add("hidden");
+
+    document.getElementById("login").classList.remove("hidden");
+    clearInterval(monitorTimer);
+    toggleStream(false);
+}
+
+
+// FILE MANAGER
+
+async function loadFiles() {
+    try {
+        let path = document.getElementById("folder").value.trim().replace(/^\/+|\/+$/g, "");
+        const response = await api("/api/files?path=" + encodeURIComponent(path));
+        const data = await response.json();
+        const box = document.getElementById("files"); box.replaceChildren();
+        document.getElementById("folder").value = path;
+        document.getElementById("uploadPath").value = path;
+        data.items.forEach(item => {
+            const div = document.createElement("div"); div.className = "file";
+            const name = document.createElement("span"); name.textContent = (item.directory ? "📁 " : "📄 ") + item.name;
+            div.appendChild(name);
+            const actions = document.createElement("span");
+            if (item.directory) {
+                const open = document.createElement("button"); open.textContent = "Open";
+                open.onclick = () => { document.getElementById("folder").value = path ? path + "/" + item.name : item.name; loadFiles(); };
+                actions.append(open);
+            } else {
+                const download = document.createElement("button"); download.textContent = "Download";
+                download.onclick = () => downloadFile(path, item.name); actions.append(download);
+            }
+            div.append(actions); box.append(div);
+        });
+        if (!data.items.length) box.textContent = "This folder is empty.";
+        highlightSelectedTreeFolder();
+    } catch(error) { document.getElementById("files").textContent = error.message; }
+}
+
+function goParent() {
+    const current = document.getElementById("folder").value.trim().replace(/\\/g, "/");
+    document.getElementById("folder").value = current.includes("/") ? current.slice(0, current.lastIndexOf("/")) : "";
+    loadFiles();
+}
+
+async function downloadFile(path, name) {
+    try {
+        const response = await api("/api/download?path=" + encodeURIComponent(path) + "&name=" + encodeURIComponent(name));
+        const blob = await response.blob(); const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+    } catch (error) { alert(error.message); }
+}
+
+async function refreshFolderTree() {
+    const host = document.getElementById("folderTree");
+    host.replaceChildren();
+    const root = makeTreeNode("", "LAN_Shared", true, 0);
+    host.append(root);
+    const rootChildren = root.querySelector(":scope > .tree-children");
+    const rootToggle = root.querySelector(":scope > .tree-line .tree-toggle");
+    rootChildren.classList.remove("hidden"); rootToggle.textContent = "▾";
+    await expandTreeNode(root, "");
+    highlightSelectedTreeFolder();
+}
+
+function makeTreeNode(path, name, isDirectory, depth) {
+    const node = document.createElement("div"); node.className = "tree-node"; node.dataset.path = path;
+    const line = document.createElement("div"); line.className = "tree-line";
+    const toggle = document.createElement("button"); toggle.className = "tree-toggle";
+    toggle.textContent = isDirectory ? "▸" : "·"; toggle.disabled = !isDirectory;
+    const select = document.createElement("button"); select.className = "tree-select";
+    select.textContent = (isDirectory ? "📁 " : "📄 ") + name;
+    select.onclick = () => {
+        if (isDirectory) { document.getElementById("folder").value = path; loadFiles(); highlightSelectedTreeFolder(); }
+    };
+    line.append(toggle, select); node.append(line);
+    if (isDirectory) {
+        const children = document.createElement("div"); children.className = "tree-children hidden"; node.append(children);
+        toggle.onclick = async () => {
+            const opening = children.classList.contains("hidden");
+            children.classList.toggle("hidden"); toggle.textContent = opening ? "▾" : "▸";
+            if (opening && !node.dataset.loaded) await expandTreeNode(node, path);
+        };
+    }
+    return node;
+}
+
+async function expandTreeNode(node, path) {
+    const children = node.querySelector(":scope > .tree-children"); if (!children) return;
+    try {
+        const response = await api("/api/tree?path=" + encodeURIComponent(path)); const data = await response.json();
+        children.replaceChildren();
+        data.items.forEach(item => {
+            const childPath = path ? path + "/" + item.name : item.name;
+            children.append(makeTreeNode(childPath, item.name, item.directory, 0));
+        });
+        if (!children.children.length) children.textContent = "(no subfolders)";
+        node.dataset.loaded = "1";
+    } catch (error) { children.textContent = error.message; }
+}
+
+function highlightSelectedTreeFolder() {
+    const selected = document.getElementById("folder").value.trim().replace(/\\/g, "/");
+    document.querySelectorAll("#folderTree .tree-select").forEach(button => {
+        const node = button.closest(".tree-node"); button.classList.toggle("selected", node.dataset.path === selected);
+    });
+}
+
+async function createItem(kind) {
+    const name = document.getElementById("newItemName").value.trim();
+    const path = document.getElementById("folder").value.trim();
+    const content = kind === "file" ? document.getElementById("newFileContent").value : "";
+    if (!name) return alert("Enter a name first.");
+    if (!confirm("Create " + kind + " '" + name + "' inside " + (path || "LAN_Shared root") + "?")) return;
+    try {
+        const response = await api("/api/create", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({path, name, kind, content})});
+        const result = await response.json();
+        document.getElementById("createStatus").textContent = result.message;
+        document.getElementById("newItemName").value = "";
+        if (kind === "file") document.getElementById("newFileContent").value = "";
+        await loadFiles(); await refreshFolderTree();
+    } catch (error) { document.getElementById("createStatus").textContent = error.message; }
+}
+
+// UPLOAD
+
+async function uploadFile() {
+
+    let file = document.getElementById("upload").files[0];
+
+    if (!file) {
+        return alert("Choose a file first.");
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        return alert("Maximum upload size is 10 MB.");
+    }
+
+    let reader = new FileReader();
+
+    reader.onload = async () => {
+
+        try {
+
+            let data = {
+                name: file.name,
+                path: document.getElementById("uploadPath").value,
+                data: reader.result.split(",")[1]
+            };
+
+            await api("/api/upload", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            });
+
+            document.getElementById("fileStatus").textContent =
+                "Upload complete!";
+
+            loadFiles();
+
+        } catch(error) {
+
+            document.getElementById("fileStatus").textContent =
+                error.message;
+        }
+    };
+
+    reader.readAsDataURL(file);
+}
+
+
+// TERMINAL
+
+async function runCommand() {
+
+    try {
+
+        let command = document.getElementById("command").value;
+
+        let response = await api("/api/terminal", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({command})
+        });
+
+        let data = await response.json();
+
+        if (data.output === "__CLEAR__") document.getElementById("terminalOutput").textContent = "Terminal cleared.";
+        else document.getElementById("terminalOutput").textContent = data.output;
+
+    } catch(error) {
+
+        document.getElementById("terminalOutput").textContent =
+            error.message;
+    }
+}
+
+
+// SCREEN VIEWER
+
+async function getScreen() {
+
+    let box = document.getElementById("screenStatus");
+
+    box.textContent = "Capturing screen...";
+
+    try {
+
+        let response = await api("/api/screen");
+
+        let data = await response.json();
+
+        let img = document.createElement("img");
+
+        img.src = "data:image/jpeg;base64," + data.image;
+
+        box.replaceChildren(img);
+
+    } catch(error) {
+
+        box.textContent = error.message;
+    }
+}
+
+
+// NEW DASHBOARD FEATURES
+let monitorTimer = null;
+let streamTimer = null;
+let streamRunning = false;
+let monitorBusy = false;
+
+function formatBytes(value) {
+    if (!Number.isFinite(Number(value))) return "--";
+    let n = Number(value), units = ["B", "KB", "MB", "GB", "TB"], i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return n.toFixed(i === 0 ? 0 : 1) + " " + units[i];
+}
+function setMeter(id, value) {
+    document.getElementById(id).style.width = Math.max(0, Math.min(100, Number(value) || 0)) + "%";
+}
+async function loadMonitor() {
+    if (monitorBusy || !token) return;
+    monitorBusy = true;
+    try {
+        const response = await api("/api/monitor");
+        const d = await response.json();
+        document.getElementById("cpuValue").textContent = Number(d.cpu_percent).toFixed(1) + "%";
+        setMeter("cpuBar", d.cpu_percent);
+        document.getElementById("ramValue").textContent = Number(d.memory.percent).toFixed(1) + "%";
+        setMeter("ramBar", d.memory.percent);
+        const gpu = d.gpu || {};
+        document.getElementById("gpuValue").textContent = gpu.name || "Not detected";
+        document.getElementById("gpuDetails").textContent = [
+            gpu.load_percent == null ? null : "Load " + gpu.load_percent + "%",
+            gpu.temperature_c == null ? null : gpu.temperature_c + "°C",
+            gpu.memory_used_mb == null ? null : Math.round(gpu.memory_used_mb) + "/" + Math.round(gpu.memory_total_mb) + " MB VRAM"
+        ].filter(Boolean).join(" · ") || "Load and temperature unavailable";
+        const disks = document.getElementById("diskMetrics"); disks.replaceChildren();
+        (d.disks || []).forEach(disk => {
+            const card = document.createElement("div"); card.className = "metric";
+            const label = document.createElement("div"); label.textContent = disk.mountpoint + " (" + disk.device + ")";
+            const strong = document.createElement("strong"); strong.textContent = Number(disk.percent).toFixed(1) + "%";
+            const detail = document.createElement("div"); detail.className = "muted"; detail.textContent = formatBytes(disk.used) + " used / " + formatBytes(disk.total);
+            const meter = document.createElement("div"); meter.className = "meter"; const fill = document.createElement("span"); fill.style.width = disk.percent + "%"; meter.append(fill);
+            card.append(label, strong, detail, meter); disks.append(card);
+        });
+        const sensorLines = [];
+        Object.entries(d.temperatures || {}).forEach(([sensor, entries]) => entries.forEach(e => sensorLines.push(sensor + " / " + e.label + ": " + e.current + "°C")));
+        document.getElementById("temperatureInfo").textContent = sensorLines.length ? sensorLines.join("\n") : "No temperature sensors exposed by this system.";
+    } catch (e) { document.getElementById("temperatureInfo").textContent = e.message; }
+    finally { monitorBusy = false; }
+}
+async function loadProcesses() {
+    try {
+        const response = await api("/api/processes"); const data = await response.json();
+        const body = document.getElementById("processRows"); body.replaceChildren();
+        data.processes.forEach(proc => {
+            const tr = document.createElement("tr");
+            [proc.name, proc.pid, Number(proc.cpu_percent).toFixed(1) + "%", proc.memory_mb + " MB", proc.own_process ? "This user" : (proc.username || "Unknown")].forEach(value => {
+                const td = document.createElement("td"); td.textContent = value; tr.append(td);
+            });
+            const action = document.createElement("td");
+            if (proc.own_process) {
+                const btn = document.createElement("button"); btn.className = "danger"; btn.textContent = "End";
+                btn.onclick = () => terminateProcess(proc.pid, proc.name); action.append(btn);
+            } else action.textContent = "Protected";
+            tr.append(action); body.append(tr);
+        });
+    } catch (e) { document.getElementById("processRows").textContent = e.message; }
+}
+async function terminateProcess(pid, name) {
+    if (!confirm("End process '" + name + "' (PID " + pid + ")? Unsaved work may be lost.")) return;
+    try { const r = await api("/api/process/terminate", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({pid})}); const d = await r.json(); alert(d.message); loadProcesses(); }
+    catch (e) { alert(e.message); }
+}
+async function launchProcess() {
+    const path = document.getElementById("launchPath").value.trim();
+    if (!path) return alert("Enter the full path to an application.");
+    if (!confirm("Launch this application on the PC?\n" + path)) return;
+    try { const r = await api("/api/process/launch", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({path})}); const d = await r.json(); alert(d.message); loadProcesses(); }
+    catch (e) { alert(e.message); }
+}
+async function powerAction(action) {
+    const labels = {lock:"Lock this PC now?", restart:"Restart this PC in 30 seconds?", shutdown:"Shut down this PC in 30 seconds?", cancel:"Cancel the pending shutdown/restart?"};
+    if (!confirm(labels[action])) return;
+    try { const r = await api("/api/power", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({action})}); const d = await r.json(); document.getElementById("powerStatus").textContent = d.message; }
+    catch (e) { document.getElementById("powerStatus").textContent = e.message; }
+}
+async function loadNetwork() {
+    try {
+        const r = await api("/api/network"); const d = await r.json();
+        document.getElementById("downloadRate").textContent = formatBytes(d.download_bytes_sec) + "/s";
+        document.getElementById("uploadRate").textContent = formatBytes(d.upload_bytes_sec) + "/s";
+        document.getElementById("downloadTotal").textContent = formatBytes(d.total_received);
+        document.getElementById("uploadTotal").textContent = formatBytes(d.total_sent);
+        document.getElementById("networkAddresses").textContent = (d.addresses || []).map(a => a.interface + ": " + a.address).join("\n") || "No IPv4 addresses found.";
+        const body = document.getElementById("connectionRows"); body.replaceChildren();
+        (d.connections || []).forEach(c => { const tr=document.createElement("tr"); [c.pid == null ? "-" : c.pid,c.local,c.remote,c.status].forEach(v=>{const td=document.createElement("td");td.textContent=v;tr.append(td);});body.append(tr); });
+    } catch (e) { document.getElementById("networkAddresses").textContent = e.message; }
+}
+async function updateScreen() {
+    if (!streamRunning) return;
+    try { const r = await api("/api/screen"); const d = await r.json(); const img = document.getElementById("liveScreenImage"); img.src = "data:image/jpeg;base64," + d.image; img.classList.remove("hidden"); }
+    catch (e) { document.getElementById("streamState").textContent = e.message; toggleStream(false); }
+}
+function toggleStream(force) {
+    streamRunning = typeof force === "boolean" ? force : !streamRunning;
+    const btn = document.getElementById("streamButton");
+    if (streamRunning) {
+        btn.textContent = "Stop live stream"; document.getElementById("streamState").textContent = "Streaming";
+        updateScreen(); streamTimer = setInterval(updateScreen, 1200);
+    } else {
+        clearInterval(streamTimer); streamTimer = null; btn.textContent = "Start live stream";
+        document.getElementById("streamState").textContent = "Stopped";
+    }
+}
+function startDashboardUpdates() {
+    clearInterval(monitorTimer); loadMonitor(); loadProcesses(); loadNetwork();
+    monitorTimer = setInterval(() => { loadMonitor(); loadNetwork(); }, 2500);
+}
+
+// RESTORE SESSION
+
+if (token) {
+    showDashboard();
+}
+
+</script>
+
+</body>
+</html>
